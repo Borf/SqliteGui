@@ -1,0 +1,3 @@
+[submodule "ConsoleGui"]
+	path = ConsoleGui
+	url = https://github.com/borf/ConsoleGui.git
