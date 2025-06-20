@@ -1,0 +1,81 @@
+﻿using ConGui;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SqliteGui;
+public partial class SqliteGui : App
+{
+    Database database = new Database("database.db");
+    string SelectedTable = string.Empty;
+    List<Column> SelectedTableStructure = new();
+    List<List<object?>> SelectedTableData = new();
+    int SelectedTableBrowsePage = 0;
+    int SelectedTablePageCount = 0;
+
+
+    public async Task Run()
+    {
+        while (true)
+        {
+            Gui.BeginFrame();
+            Gui.Begin("#main", WindowFlags.TopWindow | WindowFlags.HasMenu);
+            {
+
+                BuildMenu();
+
+                Gui.Split("Split", true, 30);
+                {
+                    BuildTableList();
+                }
+                Gui.NextSplit();
+                {
+                    if (string.IsNullOrEmpty(SelectedTable))
+                    {
+                        Gui.SetNextTextColor(Style.DangerText);
+                        Gui.Text("No table selected");
+                    }
+                    else
+                    {
+                        Gui.BeginTabPanel("Tabs");
+
+                        BuildTabstructure();
+                        BuildTabBrowse();
+                        BuildTabSearch();
+
+
+                        Gui.EndTabPanel();
+                    }
+                }
+                Gui.EndSplit();
+            }
+            Gui.End();
+
+
+            Gui.Render();
+
+            await Task.Delay(1);
+        }
+    }
+
+
+
+    void SetTable(string table)
+    {
+        SelectedTable = table;
+        SelectedTableStructure = database.GetTableStructure(SelectedTable);
+        SelectedTableBrowsePage = 0;
+        SelectedTableData = database.RefreshTableData(table, 0);
+        SelectedTablePageCount = database.PageCount(table);
+    }
+
+    void SetPage(int newPage)
+    {
+        SelectedTableBrowsePage = Math.Clamp(newPage, 0, SelectedTablePageCount);
+        SelectedTableData = database.RefreshTableData(SelectedTable, SelectedTableBrowsePage);
+
+    }
+}

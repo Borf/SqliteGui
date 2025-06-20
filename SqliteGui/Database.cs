@@ -124,7 +124,7 @@ public class Database : IDisposable
         return reader.GetColumnSchema().Select(c => new Column
         {
             ColumnName = c.ColumnName,
-            DataType = c.DataTypeName,
+            DataType = c.DataTypeName ?? "No Datatype",
             AllowDBNull = c.AllowDBNull,
             IsKey = c.IsKey ?? false,
             IsAutoIncrement = c.IsAutoIncrement ?? false,
@@ -191,10 +191,10 @@ public class DbIndex
 
 public class TableRelation
 {
-    public string Field { get; set; }
-    public string ReferencedTable { get; set; }
-    public string ReferencedField { get; set; }
-    public string CascadingEffect { get; set; }
+    public string Field { get; set; } = string.Empty;
+    public string ReferencedTable { get; set; } = string.Empty;
+    public string ReferencedField { get; set; } = string.Empty;
+    public string CascadingEffect { get; set; } = string.Empty;
 }
 
 
