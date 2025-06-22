@@ -26,15 +26,21 @@ public partial class SqliteGui
                 Gui.InputText("#name", false, ref field.ColumnName);
 
                 Gui.SameLine();
-                Gui.SetNextWidth(10);
-                Gui.InputText("#type", false, ref field.DataType);
+                Gui.SetNextWidth(15);
+                if(Gui.BeginComboBox("#type", field.DataType.ToString()))
+                {
+                    foreach (var t in Enum.GetValues<DataType>())
+                        if (Gui.ComboBoxEntry(t.ToString(), field.DataType == t))
+                            field.DataType = t;
+                    Gui.EndComboBox();
+                }
 
                 Gui.PopId();
             }
 
             if (Gui.Button("Add column", true))
             {
-                SelectedTableStructure.Add(new Column { ColumnName = "", DataType = "TEXT" });
+                SelectedTableStructure.Add(new Column { ColumnName = "", DataType = DataType.TEXT });
             }
 
             Gui.EndTab();

@@ -124,7 +124,7 @@ public class Database : IDisposable
         return reader.GetColumnSchema().Select(c => new Column
         {
             ColumnName = c.ColumnName,
-            DataType = c.DataTypeName ?? "No Datatype",
+            DataType = Enum.Parse<DataType>(c.DataTypeName ?? DataType.UNKNOWN.ToString()),
             AllowDBNull = c.AllowDBNull,
             IsKey = c.IsKey ?? false,
             IsAutoIncrement = c.IsAutoIncrement ?? false,
@@ -201,11 +201,21 @@ public class TableRelation
 public class Column
 {
     public string ColumnName = string.Empty;
-    public string DataType = string.Empty;
+    public DataType DataType = DataType.UNKNOWN;
     public bool? AllowDBNull;
     public bool IsKey;
     public bool IsAutoIncrement;
     public bool IsReadOnly;
     public bool IsUnique;
     public int Size;
+}
+
+public enum DataType
+{
+    TEXT,
+    INTEGER,
+    BLOB,
+    REAL,
+    NUMERIC,
+    UNKNOWN,
 }
