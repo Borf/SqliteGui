@@ -118,20 +118,40 @@ public class Database : IDisposable
     {
         if (tableName == "")
             return new();
+
+        //using var command = connection.CreateCommand();
+        //command.CommandText = "SELECT * FROM " + tableName + " LIMIT 1";
+        //using var reader = command.ExecuteReader();
+        //return reader.GetColumnSchema().Select(c => new Column
+        //{
+        //    ColumnName = c.ColumnName,
+        //    DataType = Enum.Parse<DataType>(c.DataTypeName ?? DataType.UNKNOWN.ToString()),
+        //    AllowDBNull = c.AllowDBNull ?? false,
+        //    IsKey = c.IsKey ?? false,
+        //    IsAutoIncrement = c.IsAutoIncrement ?? false,
+        //    IsReadOnly = c.IsReadOnly ?? false,
+        //    IsUnique = c.IsUnique ?? false,
+        //    Size = c.ColumnSize ?? 0,
+        //    DefaultValue = "", //TODO: where do I get this?
+        //}).ToList();
+
+        List<Column> ret = new();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT * FROM " + tableName + " LIMIT 1";
+        command.CommandText = $"PRAGMA table_info({tableName});";
         using var reader = command.ExecuteReader();
-        return reader.GetColumnSchema().Select(c => new Column
+        while(reader.Read())
         {
-            ColumnName = c.ColumnName,
-            DataType = Enum.Parse<DataType>(c.DataTypeName ?? DataType.UNKNOWN.ToString()),
-            AllowDBNull = c.AllowDBNull,
-            IsKey = c.IsKey ?? false,
-            IsAutoIncrement = c.IsAutoIncrement ?? false,
-            IsReadOnly = c.IsReadOnly ?? false,
-            IsUnique = c.IsUnique ?? false,
-            Size = c.ColumnSize ?? 0,
-        }).ToList();
+            ret.Add(new Column()
+            {
+                ColumnName = reader.GetString(1),
+                DataType = Enum.Parse<DataType>(reader.GetString(2)),
+                AllowDBNull = reader.GetInt32(3) != 0,
+                DefaultValue = reader.IsDBNull(4) ? null : reader.GetString(4),
+                IsKey = reader.GetInt32(5) != 0
+            });
+        }
+        return ret;
+
     }
 
     public List<DbIndex> GetIndices(string tableName)
@@ -201,8 +221,9 @@ public class TableRelation
 public class Column
 {
     public string ColumnName = string.Empty;
+    public string? DefaultValue = string.Empty;
     public DataType DataType = DataType.UNKNOWN;
-    public bool? AllowDBNull;
+    public bool AllowDBNull;
     public bool IsKey;
     public bool IsAutoIncrement;
     public bool IsReadOnly;
