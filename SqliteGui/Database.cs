@@ -136,22 +136,52 @@ public class Database : IDisposable
         //}).ToList();
 
         List<Column> ret = new();
-        using var command = connection.CreateCommand();
-        command.CommandText = $"PRAGMA table_info({tableName});";
-        using var reader = command.ExecuteReader();
-        while(reader.Read())
+        using (var command = connection.CreateCommand())
         {
-            ret.Add(new Column()
+            command.CommandText = $"PRAGMA table_info({tableName});";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
             {
-                ColumnName = reader.GetString(1),
-                DataType = Enum.Parse<DataType>(reader.GetString(2)),
-                AllowDBNull = reader.GetInt32(3) != 0,
-                DefaultValue = reader.IsDBNull(4) ? null : reader.GetString(4),
-                IsKey = reader.GetInt32(5) != 0
-            });
+                ret.Add(new Column()
+                {
+                    ColumnName = reader.GetString(1),
+                    DataType = Enum.Parse<DataType>(reader.GetString(2)),
+                    AllowDBNull = reader.GetInt32(3) != 0,
+                    DefaultValue = reader.IsDBNull(4) ? null : reader.GetString(4),
+                    IsKey = reader.GetInt32(5) != 0
+                });
+            }
         }
-        return ret;
 
+        using (var command = connection.CreateCommand())
+        {
+            //seq, name, unique, origin, partial
+            command.CommandText = $"PRAGMA index_list({tableName});";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                string indexName = reader.GetString(1);
+                using (var command2 = connection.CreateCommand())
+                {
+                    //seqno, cid, name
+                    command2.CommandText = $"PRAGMA index_info({indexName});";
+                    using var reader2 = command2.ExecuteReader();
+                    reader2.Read(); //should be 1 result, but can verify that the reader2.cid == column.cid (but column.cid is not stored)
+                    var col = ret.First(c => c.ColumnName == reader2.GetString(2));
+                    col.IsUnique = reader.GetInt32(2) != 0;
+                }
+            }
+        }
+        using (var command = connection.CreateCommand())
+        {
+            //seq, name, unique, origin, partial
+            command.CommandText = @$" select ""is-autoincrement"" from sqlite_master where tbl_name=""{tableName}"" and SQL like '%AUTOINCREMENT%';";
+            using var reader = command.ExecuteReader();
+            if (reader.Read())
+                if(reader.HasRows)
+                    ret.First(r => r.IsKey).IsAutoIncrement = true;
+        }        
+        return ret;
     }
 
     public List<DbIndex> GetIndices(string tableName)
@@ -219,16 +249,14 @@ public class TableRelation
 
 
 public class Column
-{
+{ //TODO: remove fields that are not used in sqlite
     public string ColumnName = string.Empty;
     public string? DefaultValue = string.Empty;
     public DataType DataType = DataType.UNKNOWN;
     public bool AllowDBNull;
     public bool IsKey;
     public bool IsAutoIncrement;
-    public bool IsReadOnly;
     public bool IsUnique;
-    public int Size;
 }
 
 public enum DataType
