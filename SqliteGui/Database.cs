@@ -142,13 +142,17 @@ public class Database : IDisposable
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
+                if (!Enum.TryParse<DataType>(reader.GetString(2), out DataType dataType))
+                    dataType = DataType.UNKNOWN;
+
                 ret.Add(new Column()
                 {
                     ColumnName = reader.GetString(1),
-                    DataType = Enum.Parse<DataType>(reader.GetString(2)),
+                    OriginalColumnName = reader.GetString(1),
+                    DataType = dataType,
                     AllowDBNull = reader.GetInt32(3) != 0,
                     DefaultValue = reader.IsDBNull(4) ? null : reader.GetString(4),
-                    IsKey = reader.GetInt32(5) != 0
+                    IsKey = reader.GetInt32(5) != 0,
                 });
             }
         }
@@ -214,6 +218,14 @@ public class Database : IDisposable
         }
         return 0;
     }
+
+    public void RunQueries(string queries)
+    {
+        Debug.WriteLine("Running\n" + queries);
+        using var command = connection.CreateCommand();
+        command.CommandText = queries;
+        command.ExecuteNonQuery();
+    }
 }
 
 public class DbIndex
@@ -249,14 +261,15 @@ public class TableRelation
 
 
 public class Column
-{ //TODO: remove fields that are not used in sqlite
-    public string ColumnName = string.Empty;
-    public string? DefaultValue = string.Empty;
-    public DataType DataType = DataType.UNKNOWN;
-    public bool AllowDBNull;
-    public bool IsKey;
-    public bool IsAutoIncrement;
-    public bool IsUnique;
+{ //Not properties, because they need to be passed as ref
+    public required string ColumnName = string.Empty;
+    public required string OriginalColumnName = string.Empty;
+    public required string? DefaultValue = string.Empty;
+    public required DataType DataType = DataType.UNKNOWN;
+    public required bool AllowDBNull;
+    public required bool IsKey;
+    public bool IsAutoIncrement = false;
+    public bool IsUnique = false;
 }
 
 public enum DataType
