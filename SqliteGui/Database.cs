@@ -46,6 +46,7 @@ public class Database : IDisposable
         {
             Tables.Add(reader.GetString(0));
         }
+        Tables = Tables.Order().ToList();
     }
 
 
@@ -150,7 +151,7 @@ public class Database : IDisposable
                     ColumnName = reader.GetString(1),
                     OriginalColumnName = reader.GetString(1),
                     DataType = dataType,
-                    AllowDBNull = reader.GetInt32(3) != 0,
+                    AllowDBNull = reader.GetInt32(3) == 0,
                     DefaultValue = reader.IsDBNull(4) ? null : reader.GetString(4),
                     IsKey = reader.GetInt32(5) != 0,
                 });

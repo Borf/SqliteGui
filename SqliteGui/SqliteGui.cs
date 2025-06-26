@@ -45,7 +45,7 @@ public partial class SqliteGui : App
                         BuildTabstructure();
                         BuildTabBrowse();
                         BuildTabSearch();
-
+                        BuildTabOperations();
 
                         Gui.EndTabPanel();
                     }
