@@ -32,7 +32,6 @@ public class Database : IDisposable
             command.CommandText = @"CREATE TABLE _gui_tablename (TableName	TEXT NOT NULL,	NameColumn	TEXT NOT NULL,	PRIMARY KEY(TableName))";
             command.ExecuteNonQuery();
         }
-
     }
 
     private void ReadQuery(string query, Action<SqliteDataReader> action)

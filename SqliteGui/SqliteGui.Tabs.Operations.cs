@@ -20,16 +20,22 @@ public partial class SqliteGui
             Gui.SetNextWidth(10);
             if (Gui.Button("Rename", true))
             {
-
+                database.RunQueries($"ALTER TABLE \"{SelectedTable}\" RENAME TO \"{NewTableName}\";");
+                database.RefreshTables();
+                SelectedTable = NewTableName;
             }
 
             Gui.NewLine();
             Gui.SetNextBackgroundColor(Style.Danger);
             if(Gui.Button("Truncate", true))
             {
-                Gui.Confirm("Are you sure you want to delete all values in this table?", () =>
+                Gui.Confirm($"Are you sure you want to delete all values in the table '{SelectedTable}'", () =>
                 {
-                    // truncate table logic here
+                    database.RunQueries($"TRUNCATE TABLE \"{SelectedTable}\"");
+                    SelectedTableBrowsePage = 0;
+                    SelectedTablePageCount = 0;
+                    SelectedTableData = database.RefreshTableData(SelectedTable, 0);
+
                 });
             }
 
@@ -37,16 +43,13 @@ public partial class SqliteGui
             Gui.SetNextBackgroundColor(Style.Danger);
             if (Gui.Button("Drop", true))
             {
-                Gui.Confirm("Are you sure you want to drop this table?", () =>
+                Gui.Confirm($"Are you sure you want to drop the table '{SelectedTable}'?", () =>
                 {
-                    // Drop table logic here
+                    database.RunQueries($"DROP TABLE \"{SelectedTable}\"");
+                    database.RefreshTables();
+                    SelectedTable = string.Empty;
                 });
             }
-
-
-
-
-
             Gui.EndTab();
         }
     }
