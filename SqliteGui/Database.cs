@@ -14,14 +14,14 @@ namespace SqliteGui;
 
 public class Database : IDisposable
 {
-    private string fileName;
     private SqliteConnection connection;
+
+    public string SqlLog { private set; get; }
 
     public List<string> Tables { get; set; } = new();
 
     public Database(string fileName)
     {
-        this.fileName = fileName;
         connection = new SqliteConnection($"Data Source='{fileName}'");
         connection.Open();
         RefreshTables();
@@ -35,18 +35,34 @@ public class Database : IDisposable
 
     }
 
+    private void ReadQuery(string query, Action<SqliteDataReader> action)
+    {
+        SqlLog += query + "\n";
+        using var command = connection.CreateCommand();
+        command.CommandText = query;
+        using var reader = command.ExecuteReader();
+        action.Invoke(reader);
+    }
+    private void RunQuery(string query)
+    {
+        SqlLog += query + "\n";
+        using var command = connection.CreateCommand();
+        command.CommandText = query;
+        command.ExecuteNonQuery();
+    }
+
 
     public void RefreshTables()
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT name FROM sqlite_master WHERE type='table'";
-        using var reader = command.ExecuteReader();
-        Tables = new();
-        while (reader.Read())
+        ReadQuery("SELECT name FROM sqlite_master WHERE type='table'", reader =>
         {
-            Tables.Add(reader.GetString(0));
-        }
-        Tables = Tables.Order().ToList();
+            Tables = new();
+            while (reader.Read())
+            {
+                Tables.Add(reader.GetString(0));
+            }
+            Tables = Tables.Order().ToList();
+        });
     }
 
 
@@ -58,34 +74,30 @@ public class Database : IDisposable
     public List<List<object?>> RefreshTableData(string tableName, int offset)
     {
         List<List<object?>> data = new();
-        using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT * FROM {tableName} LIMIT {offset*20},20";
-        using var reader = command.ExecuteReader();
-        //var columnScheme = reader.GetColumnSchema();
-        //foreach (var column in columnScheme)
-        //{
-        //    browseTable.Columns.Add(column.ColumnName);
-        //}
-        while(reader.Read())
+        ReadQuery($"SELECT * FROM {tableName} LIMIT {offset * 20},20", reader =>
         {
-            List<object?> row = new();
-            for (int i = 0; i < reader.FieldCount; i++)
+            while (reader.Read())
             {
-                row.Add(reader.GetValue(i));
+                List<object?> row = new();
+                for (int i = 0; i < reader.FieldCount; i++)
+                {
+                    row.Add(reader.GetValue(i));
+                }
+                data.Add(row);
             }
-            data.Add(row);
-        }
+        });
         return data;
     }
 
     public string GetCreateTable(string selectedTable)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT sql FROM sqlite_master WHERE type='table' and name='"+selectedTable+"'";
-        using var reader = command.ExecuteReader();
-        if (reader.Read())
-            return reader.GetString(0);
-        return "";
+        string query = string.Empty;
+        ReadQuery("SELECT sql FROM sqlite_master WHERE type='table' and name='" + selectedTable + "'", reader =>
+        {
+            if (reader.Read())
+                query = reader.GetString(0);
+        });
+        return query;
     }
 
     public List<TableRelation> GetTableRelations(string tableName)
@@ -120,27 +132,9 @@ public class Database : IDisposable
         if (tableName == "")
             return new();
 
-        //using var command = connection.CreateCommand();
-        //command.CommandText = "SELECT * FROM " + tableName + " LIMIT 1";
-        //using var reader = command.ExecuteReader();
-        //return reader.GetColumnSchema().Select(c => new Column
-        //{
-        //    ColumnName = c.ColumnName,
-        //    DataType = Enum.Parse<DataType>(c.DataTypeName ?? DataType.UNKNOWN.ToString()),
-        //    AllowDBNull = c.AllowDBNull ?? false,
-        //    IsKey = c.IsKey ?? false,
-        //    IsAutoIncrement = c.IsAutoIncrement ?? false,
-        //    IsReadOnly = c.IsReadOnly ?? false,
-        //    IsUnique = c.IsUnique ?? false,
-        //    Size = c.ColumnSize ?? 0,
-        //    DefaultValue = "", //TODO: where do I get this?
-        //}).ToList();
-
         List<Column> ret = new();
-        using (var command = connection.CreateCommand())
+        ReadQuery($"PRAGMA table_info({tableName});", reader =>
         {
-            command.CommandText = $"PRAGMA table_info({tableName});";
-            using var reader = command.ExecuteReader();
             while (reader.Read())
             {
                 if (!Enum.TryParse<DataType>(reader.GetString(2), out DataType dataType))
@@ -156,13 +150,11 @@ public class Database : IDisposable
                     IsKey = reader.GetInt32(5) != 0,
                 });
             }
-        }
+        });
 
-        using (var command = connection.CreateCommand())
+        //seq, name, unique, origin, partial
+        ReadQuery($"PRAGMA index_list({tableName});", reader =>
         {
-            //seq, name, unique, origin, partial
-            command.CommandText = $"PRAGMA index_list({tableName});";
-            using var reader = command.ExecuteReader();
             while (reader.Read())
             {
                 string indexName = reader.GetString(1);
@@ -176,16 +168,14 @@ public class Database : IDisposable
                     col.IsUnique = reader.GetInt32(2) != 0;
                 }
             }
-        }
-        using (var command = connection.CreateCommand())
+        });
+        //seq, name, unique, origin, partial
+        ReadQuery(@$" select ""is-autoincrement"" from sqlite_master where tbl_name=""{tableName}"" and SQL like '%AUTOINCREMENT%';", reader =>
         {
-            //seq, name, unique, origin, partial
-            command.CommandText = @$" select ""is-autoincrement"" from sqlite_master where tbl_name=""{tableName}"" and SQL like '%AUTOINCREMENT%';";
-            using var reader = command.ExecuteReader();
             if (reader.Read())
-                if(reader.HasRows)
+                if (reader.HasRows)
                     ret.First(r => r.IsKey).IsAutoIncrement = true;
-        }        
+        });
         return ret;
     }
 
@@ -194,38 +184,36 @@ public class Database : IDisposable
         var indices = new List<DbIndex>();
         if (tableName == "")
             return indices;
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT * FROM sqlite_master WHERE type='index' AND tbl_name = '" + tableName + "' LIMIT 1";
-        using var reader = command.ExecuteReader();
-        while(reader.Read())
+        ReadQuery("SELECT * FROM sqlite_master WHERE type='index' AND tbl_name = '" + tableName + "' LIMIT 1", reader =>
         {
-            indices.Add(new DbIndex(reader.IsDBNull(4) ? string.Empty : reader.GetString(4))
+            while (reader.Read())
             {
-                Name = reader.GetString(1),
-                Table = reader.GetString(2),
-            });
-        }
+                indices.Add(new DbIndex(reader.IsDBNull(4) ? string.Empty : reader.GetString(4))
+                {
+                    Name = reader.GetString(1),
+                    Table = reader.GetString(2),
+                });
+            }
+        });
         return indices;
     }
 
     public int PageCount(string table)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT count(*) FROM {table}";
-        using var reader = command.ExecuteReader();
-        if (reader.Read())
+        int count = 0;
+        ReadQuery($"SELECT count(*) FROM {table}", reader =>
         {
-            return reader.GetInt32(0)/20;
-        }
-        return 0;
+            if (reader.Read())
+            {
+                count = reader.GetInt32(0) / 20;
+            }
+        });
+        return count;
     }
 
     public void RunQueries(string queries)
     {
-        Debug.WriteLine("Running\n" + queries);
-        using var command = connection.CreateCommand();
-        command.CommandText = queries;
-        command.ExecuteNonQuery();
+        RunQuery(queries);
     }
 }
 

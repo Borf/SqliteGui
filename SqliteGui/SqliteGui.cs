@@ -16,7 +16,6 @@ public partial class SqliteGui : App
     int SelectedTableBrowsePage = 0;
     int SelectedTablePageCount = 0;
 
-
     public async Task Run()
     {
         while (true)
@@ -40,6 +39,8 @@ public partial class SqliteGui : App
                     }
                     else
                     {
+                        Gui.Split("Split", false, Console.WindowHeight-10);
+
                         Gui.BeginTabPanel("Tabs");
 
                         BuildTabstructure();
@@ -48,6 +49,11 @@ public partial class SqliteGui : App
                         BuildTabOperations();
 
                         Gui.EndTabPanel();
+
+                        Gui.NextSplit();
+                        Gui.Text(string.Join("\n", database.SqlLog.Split("\n").TakeLast(6)));
+                        Gui.EndSplit();
+
                     }
                 }
                 Gui.EndSplit();
