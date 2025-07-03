@@ -15,11 +15,8 @@ public partial class SqliteGui
         if (Gui.BeginTab("Operations"))
         {
             Gui.SetNextWidth(Gui.CurrentSize.X - 10);
-            Gui.InputText("Rename Table", true, ref NewTableName);
-            Gui.SameLine();
-            Gui.SetNextWidth(10);
-            if (Gui.Button("Rename", true))
-            {
+            if(Gui.InputButton("Rename Table", ref NewTableName, "Rename"))
+            { 
                 database.RunQueries($"ALTER TABLE \"{SelectedTable}\" RENAME TO \"{NewTableName}\";");
                 database.RefreshTables();
                 SelectedTable = NewTableName;
