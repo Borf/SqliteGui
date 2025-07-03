@@ -1,4 +1,5 @@
 ﻿using ConGui;
+using ConGui.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,16 +14,36 @@ public partial class SqliteGui
     {
         if (Gui.BeginTab("Browse"))
         {
-            int colWidth = 20;
+            //TODO: if Tab was clicked... need to store an extra state for this
+            //allow to change query
+
+            Gui.SetNextBackgroundColor(Style.Info);
+            Gui.SetNextTextColor(Style.Back);
+            Gui.Text($"Showing {SelectedTableBrowsePage * 20} - {SelectedTableBrowsePage * 20 + 20} out of {SelectedTableResultCount}");
+
+            Dictionary<DataType, int> colWidth = new() {
+                { DataType.INTEGER, 10},
+                { DataType.TEXT, 20},
+                { DataType.NUMERIC, 10},
+                { DataType.REAL, 10},
+                { DataType.BLOB, 5},
+                { DataType.UNKNOWN, 5 },
+            };
+
+
             Gui.PushId("Header");
             foreach (Column field in SelectedTableStructure)
             {
                 if (field != SelectedTableStructure.First())
                     Gui.SameLine();
-                Gui.SetNextWidth(colWidth);
-                Gui.Text(field.ColumnName);
+                Gui.SetNextWidth(colWidth[field.DataType]);
+                Gui.Text(field.ColumnName.PadLength(colWidth[field.DataType]), true);
+                Gui.SameLine();
+                Gui.Text("│", true);
             }
             Gui.PopId();
+
+
 
             int rowId = 0;
             foreach (var row in SelectedTableData)
@@ -32,7 +53,7 @@ public partial class SqliteGui
                 for (int i = 0; i < row.Count; i++)
                 {
                     object? cell = row[i];
-                    Gui.SetNextWidth(colWidth);
+                    Gui.SetNextWidth(colWidth[SelectedTableStructure[i].DataType]);
                     if (i > 0)
                         Gui.SameLine();
                     if(cell is null)
@@ -53,22 +74,25 @@ public partial class SqliteGui
                     {
                         Gui.Text(cell!.GetType().ToString());
                     }
+                    Gui.SameLine();
+                    Gui.Text("│");
+
                 }
 
                 Gui.PopId();
             }
             Gui.Text("");
 
-            if (SelectedTablePageCount > 0)
+            if (SelectedTableResultCount > 0)
             {
-                if (Gui.Button("Prev", true))
+                if (Gui.Button("Prev", false))
                 {
                     SetPage(SelectedTableBrowsePage - 1);
                 }
                 Gui.SameLine();
-                Gui.Text($"Page {SelectedTableBrowsePage + 1} of {SelectedTablePageCount + 1}");
+                Gui.Text($"Page {SelectedTableBrowsePage + 1} of {(SelectedTableResultCount/20) + 1}");
                 Gui.SameLine();
-                if (Gui.Button("Next", true))
+                if (Gui.Button("Next", false))
                 {
                     SetPage(SelectedTableBrowsePage + 1);
                 }

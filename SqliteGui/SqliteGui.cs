@@ -14,7 +14,8 @@ public partial class SqliteGui : App
     List<Column> SelectedTableStructure = new();
     List<List<object?>> SelectedTableData = new();
     int SelectedTableBrowsePage = 0;
-    int SelectedTablePageCount = 0;
+    int SelectedTableResultCount = 0;
+    bool showSql = false;
 
     public async Task Run()
     {
@@ -34,13 +35,12 @@ public partial class SqliteGui : App
                 {
                     if (string.IsNullOrEmpty(SelectedTable))
                     {
-                        Gui.SetNextTextColor(Style.DangerText);
-                        Gui.Text("No table selected");
+                        BuildHome();
                     }
                     else
                     {
-                        Gui.Split("Split", false, Console.WindowHeight-10);
-
+                        if (showSql)
+                            Gui.Split("Split", false, Console.WindowHeight - 10);
                         Gui.BeginTabPanel("Tabs");
 
                         BuildTabstructure();
@@ -50,10 +50,12 @@ public partial class SqliteGui : App
 
                         Gui.EndTabPanel();
 
-                        Gui.NextSplit();
-                        Gui.Text(string.Join("\n", database.SqlLog.Split("\n").TakeLast(6)));
-                        Gui.EndSplit();
-
+                        if (showSql)
+                        {
+                            Gui.NextSplit();
+                            Gui.Text(string.Join("\n", database.SqlLog.Split("\n").TakeLast(6)));
+                            Gui.EndSplit();
+                        }
                     }
                 }
                 Gui.EndSplit();
@@ -72,15 +74,18 @@ public partial class SqliteGui : App
     void SetTable(string table)
     {
         SelectedTable = table;
-        SelectedTableStructure = database.GetTableStructure(SelectedTable);
-        SelectedTableBrowsePage = 0;
-        SelectedTableData = database.RefreshTableData(table, 0);
-        SelectedTablePageCount = database.PageCount(table);
+        if (!string.IsNullOrEmpty(SelectedTable))
+        {
+            SelectedTableStructure = database.GetTableStructure(SelectedTable);
+            SelectedTableBrowsePage = 0;
+            SelectedTableData = database.RefreshTableData(table, 0);
+            SelectedTableResultCount = database.ResultCount(table);
+        }
     }
 
     void SetPage(int newPage)
     {
-        SelectedTableBrowsePage = Math.Clamp(newPage, 0, SelectedTablePageCount);
+        SelectedTableBrowsePage = Math.Clamp(newPage, 0, SelectedTableResultCount/20);
         SelectedTableData = database.RefreshTableData(SelectedTable, SelectedTableBrowsePage);
 
     }

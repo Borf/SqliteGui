@@ -197,14 +197,14 @@ public class Database : IDisposable
         return indices;
     }
 
-    public int PageCount(string table)
+    public int ResultCount(string table)
     {
         int count = 0;
         ReadQuery($"SELECT count(*) FROM {table}", reader =>
         {
             if (reader.Read())
             {
-                count = reader.GetInt32(0) / 20;
+                count = reader.GetInt32(0);
             }
         });
         return count;

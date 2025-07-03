@@ -33,7 +33,7 @@ public partial class SqliteGui
                 {
                     database.RunQueries($"TRUNCATE TABLE \"{SelectedTable}\"");
                     SelectedTableBrowsePage = 0;
-                    SelectedTablePageCount = 0;
+                    SelectedTableResultCount = 0;
                     SelectedTableData = database.RefreshTableData(SelectedTable, 0);
 
                 });
