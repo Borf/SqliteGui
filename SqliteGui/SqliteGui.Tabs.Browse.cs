@@ -32,15 +32,17 @@ public partial class SqliteGui
 
 
             Gui.PushId("Header");
+            Gui.Text("   │", true);
             foreach (Column field in SelectedTableStructure)
             {
-                if (field != SelectedTableStructure.First())
-                    Gui.SameLine();
+                Gui.SameLine();
                 Gui.SetNextWidth(colWidth[field.DataType]);
-                Gui.Text(field.ColumnName.PadLength(colWidth[field.DataType]), true);
+                Gui.Text(field.ColumnName.PadLength(colWidth[field.DataType]), true, field.ColumnName);
                 Gui.SameLine();
                 Gui.Text("│", true);
             }
+            Gui.SameLine();
+            Gui.Text("Edit│Del│", true);
             Gui.PopId();
 
 
@@ -49,13 +51,16 @@ public partial class SqliteGui
             foreach (var row in SelectedTableData)
             {
                 Gui.PushId("row" + rowId++);
+                Gui.CheckBox("#select", false);
+                Gui.SameLine();
+                Gui.Text("│");
+
                 int col = 0;
                 for (int i = 0; i < row.Count; i++)
                 {
                     object? cell = row[i];
                     Gui.SetNextWidth(colWidth[SelectedTableStructure[i].DataType]);
-                    if (i > 0)
-                        Gui.SameLine();
+                    Gui.SameLine();
                     if(cell is null)
                     {
                         Gui.Text("NULL");
@@ -78,10 +83,41 @@ public partial class SqliteGui
                     Gui.Text("│");
 
                 }
+                Gui.SameLine();
+                if(Gui.Button("✏ ", false))
+                {
+
+                }
+                Gui.SameLine();
+                Gui.Text("│");
+                Gui.SameLine();
+                Gui.SetNextBackgroundColor(Style.Danger);
+                if (Gui.Button("X", false))
+                {
+
+                }
+                Gui.SameLine();
+                Gui.Text("│");
 
                 Gui.PopId();
             }
+
+            Gui.PushId("Footer");
+            Gui.Text("───┴");
+            foreach (Column field in SelectedTableStructure)
+            {
+                Gui.SameLine();
+                Gui.SetNextWidth(colWidth[field.DataType]);
+                Gui.Text(new string('─', colWidth[field.DataType]));
+                Gui.SameLine();
+                Gui.Text("┴");
+            }
+            Gui.SameLine();
+            Gui.Text("────┴───╯");
+            Gui.PopId();
+
             Gui.Text("");
+
 
             if (SelectedTableResultCount > 0)
             {
